@@ -25,6 +25,45 @@ const popupUI = document.getElementById('custom-popup');
 const popupMessageUI = document.getElementById('popup-message');
 let popupTimer;
 
+let chronoInterval; // Variable pour stocker le timer
+
+function lancerChrono(dureeEnSecondes) {
+    const barre = document.getElementById('timer-bar');
+    let tempsRestant = dureeEnSecondes;
+    const intervalTime = 100; // Mise à jour tous les 100ms pour être fluide
+    const deernement = 0.1; // On retire 0.1s à chaque fois
+
+    // Reset visuel immédiat
+    clearInterval(chronoInterval);
+    barre.style.width = "100%";
+    barre.className = "bg-green-500 h-4 rounded-full transition-all duration-100 ease-linear";
+
+    chronoInterval = setInterval(() => {
+        tempsRestant -= deernement;
+        
+        // Calcul du pourcentage
+        const pourcentage = (tempsRestant / dureeEnSecondes) * 100;
+        barre.style.width = `${pourcentage}%`;
+
+        // Changement de couleur dynamique
+        // Si moins de 50% -> Orange
+        // Si moins de 20% -> Rouge
+        if (pourcentage < 20) {
+            barre.classList.remove('bg-yellow-500', 'bg-green-500');
+            barre.classList.add('bg-red-600');
+        } else if (pourcentage < 50) {
+            barre.classList.remove('bg-green-500', 'bg-red-600');
+            barre.classList.add('bg-yellow-500');
+        }
+
+        // Fin du temps
+        if (tempsRestant <= 0) {
+            clearInterval(chronoInterval);
+            barre.style.width = "0%";
+        }
+    }, intervalTime);
+}
+
 // --- FONCTIONS POPUP ---
 function afficherPopup(message) {
     if(!popupMessageUI) return; // Sécurité anti-crash
@@ -98,11 +137,21 @@ socket.on('message_erreur', (msg) => {
     afficherPopup("⛔ Erreur : " + msg);
 });
 
+socket.on('afficher_regles', (texteDesRegles) => {
+    ecranLobby.classList.add('hidden');
+    ecranGame.classList.remove('hidden');
+    scoreContainerUI.classList.add('hidden');
+
+    questionTexteUI.innerHTML = texteDesRegles;
+    
+    choixContainerUI.innerHTML = "<h3 class='text-white animate-pulse'>La partie commence dans 10 secondes...</h3>";
+});
+
 socket.on('nouvelle_question', (laQuestion) => {
     ecranLobby.classList.add('hidden');
     ecranGame.classList.remove('hidden');
     scoreContainerUI.classList.add('hidden'); 
-
+    lancerChrono(laQuestion.temps);
     questionTexteUI.textContent = laQuestion.texte;
     choixContainerUI.innerHTML = ""; 
     
@@ -118,7 +167,7 @@ socket.on('nouvelle_question', (laQuestion) => {
                 unBouton.disabled = true;
                 if (unBouton === btn) {
                     unBouton.className = "bg-green-500 text-white font-bold py-4 px-4 rounded shadow border-4 border-white transform scale-105 transition"; 
-                    unBouton.textContent += " : CHOISI ✅"; 
+                    unBouton.textContent = " : CHOISI ✅"; 
                 } else {
                     unBouton.classList.add('opacity-25'); 
                     unBouton.classList.remove('hover:bg-blue-500'); 
@@ -131,6 +180,7 @@ socket.on('nouvelle_question', (laQuestion) => {
 });
 
 socket.on('fin_manche', (infos) => {
+    clearInterval(chronoInterval);
     if (infos.gagnant !== -1) {
        const boutons = choixContainerUI.querySelectorAll('button');
        if(boutons[infos.gagnant]) {

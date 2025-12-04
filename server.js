@@ -20,24 +20,24 @@ let hostId = null;
 
 app.use(express.static(path.join(__dirname, 'public')));
 
-async function genererQuestionsIA(nb, theme, nbJoueursReels) {
+async function genererQuestionsIA(nb, theme, nbJoueursReels, joueur) {
     console.log(`🤖 L'IA génère ${nb} questions pour ${nbJoueursReels} joueurs sur le thème : ${theme}...`);
-    
+    console.log(Object.values(joueurs))
     const prompt = `
     Génère une liste de ${nb} questions pour un jeu de soirée entre ${nbJoueursReels} amis.
     Thème : "${theme}".
-    
     RÈGLES :
-    1. La tournure de phrase doit être adaptée au groupe (ex: "Qui parmi nous...", "Qui dans ce groupe...", "Lequel d'entre nous...").
+
+    1. La tournure de phrase doit être adaptée au groupe (ex: "Qui parmi nous...", "Qui dans ce groupe...", "Lequel d'entre nous...","Qui fait le plus de ...", "Qui est le plus succeptible de ...").
     2. N'utilise JAMAIS "Qui de nous deux" (car nous sommes ${nbJoueursReels}).
     3. Utilise la balise "{JOUEUR}" pour désigner une personne cible dans la question.
     4. Format JSON strict obligatoirement (balises "texte" et "choix").
-    
+    5. Je veux que la question ne dépasse pas les 15 mots pour que elle ne soit pas trop long à lire.
     Exemple attendu :
     [
       {
         "texte": "Qui dans ce groupe est le plus susceptible de...",
-        "choix": ["Réponse A", "Réponse B", "Réponse C", "Réponse D"]
+        "choix": [joueur 1, joueur 2, joueur 3, ...] (et remplace joueur par les joeurs dans cette liste ${Object.values(joueurs)})
       }
     ]
     `;
@@ -146,13 +146,13 @@ io.on('connection', (socket) => {
             io.emit('message_erreur', "Seul l'hôte peut lancer la partie.");
             return; 
         }
-
+        const joueurDeLaPartie = joueurs;
         const nbTours = data.nbTours;
         const theme = data.theme;
         const nombreDeJoueursActuels = Object.keys(joueurs).length;
         console.log(`Demande de lancement : ${nbTours} tours, thème ${theme}`);
         
-        questionsDuJeu = await genererQuestionsIA(nbTours, theme, nombreDeJoueursActuels);
+        questionsDuJeu = await genererQuestionsIA(nbTours, theme, nombreDeJoueursActuels,joueurDeLaPartie);
         
         console.log("Questions reçues de l'IA ! Lancement du jeu.");
 

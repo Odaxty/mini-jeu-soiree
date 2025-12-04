@@ -19,21 +19,23 @@ const questionTexteUI = document.getElementById('question-text');
 const choixContainerUI = document.getElementById('choices-container');
 const scoreboardUI = document.getElementById('scoreboard');
 const scoreContainerUI = document.getElementById('score-container');
+const timerWrapper = document.getElementById('timer-container');
 
 // POPUP
 const popupUI = document.getElementById('custom-popup');
 const popupMessageUI = document.getElementById('popup-message');
 let popupTimer;
-
+let aDejaVote = false; // Pour savoir si on a cliqué ou pas
 let chronoInterval; // Variable pour stocker le timer
-
-function lancerChrono(dureeEnSecondes) {
+let htmlDuClassementFinal = "";
+// On ajoute un deuxième paramètre qui est "true" par défaut
+function lancerChrono(dureeEnSecondes, estUneQuestion = true) {
     const barre = document.getElementById('timer-bar');
     let tempsRestant = dureeEnSecondes;
-    const intervalTime = 100; // Mise à jour tous les 100ms pour être fluide
-    const deernement = 0.1; // On retire 0.1s à chaque fois
+    const intervalTime = 100;
+    const deernement = 0.1;
 
-    // Reset visuel immédiat
+    // Reset visuel
     clearInterval(chronoInterval);
     barre.style.width = "100%";
     barre.className = "bg-green-500 h-4 rounded-full transition-all duration-100 ease-linear";
@@ -41,13 +43,10 @@ function lancerChrono(dureeEnSecondes) {
     chronoInterval = setInterval(() => {
         tempsRestant -= deernement;
         
-        // Calcul du pourcentage
         const pourcentage = (tempsRestant / dureeEnSecondes) * 100;
         barre.style.width = `${pourcentage}%`;
 
-        // Changement de couleur dynamique
-        // Si moins de 50% -> Orange
-        // Si moins de 20% -> Rouge
+        // Couleurs
         if (pourcentage < 20) {
             barre.classList.remove('bg-yellow-500', 'bg-green-500');
             barre.classList.add('bg-red-600');
@@ -60,6 +59,20 @@ function lancerChrono(dureeEnSecondes) {
         if (tempsRestant <= 0) {
             clearInterval(chronoInterval);
             barre.style.width = "0%";
+
+            // ICI : On vérifie si c'est bien une question avant d'envoyer un vote vide
+            if (estUneQuestion && !aDejaVote) {
+                console.log("Temps écoulé pour la question !");
+                socket.emit('envoyer_vote', -1);
+                aDejaVote = true;
+                
+                const tousLesBoutons = choixContainerUI.querySelectorAll('button');
+                tousLesBoutons.forEach(btn => {
+                    btn.disabled = true;
+                    btn.classList.add('opacity-25');
+                });
+                questionTexteUI.textContent = "Trop lent ! Temps écoulé ⏳";
+            }
         }
     }, intervalTime);
 }
@@ -92,7 +105,6 @@ if(btnjoin) {
     });
 }
 
-// --- LOGIQUE SOCKET ---
 
 socket.on('maj_liste_joueurs', (listeDesPseudos) => {
     if(!listeJoueursUI) return;
@@ -106,8 +118,6 @@ socket.on('maj_liste_joueurs', (listeDesPseudos) => {
 });
 
 socket.on('mise_a_jour_host', (idDuChef) => {
-    // C'est souvent ici que tu avais l'erreur "classList of null"
-    // car adminControls n'existait pas dans ton HTML
     if (socket.id === idDuChef) {
         if(adminControls) adminControls.classList.remove('hidden');
         if(waitingMessage) waitingMessage.classList.add('hidden');
@@ -141,16 +151,22 @@ socket.on('afficher_regles', (texteDesRegles) => {
     ecranLobby.classList.add('hidden');
     ecranGame.classList.remove('hidden');
     scoreContainerUI.classList.add('hidden');
-
+    timerWrapper.classList.remove('hidden');
     questionTexteUI.innerHTML = texteDesRegles;
-    
+    questionTexteUI.className = "w-full mb-8 flex flex-col items-center justify-center text-center min-h-[100px]";
+
     choixContainerUI.innerHTML = "<h3 class='text-white animate-pulse'>La partie commence dans 10 secondes...</h3>";
+    lancerChrono(15, false);
 });
 
 socket.on('nouvelle_question', (laQuestion) => {
     ecranLobby.classList.add('hidden');
     ecranGame.classList.remove('hidden');
     scoreContainerUI.classList.add('hidden'); 
+    timerWrapper.classList.remove('hidden');
+    questionTexteUI.className = "bg-purple-800/80 p-4 rounded-xl border-l-4 border-yellow-400 shadow-lg flex items-center gap-4 transition-transform hover:scale-105 justify-center text-center mb-8";
+    
+    aDejaVote = false; 
     lancerChrono(laQuestion.temps);
     questionTexteUI.textContent = laQuestion.texte;
     choixContainerUI.innerHTML = ""; 
@@ -161,13 +177,16 @@ socket.on('nouvelle_question', (laQuestion) => {
         btn.className = "bg-blue-600 hover:bg-blue-500 text-white font-bold py-4 px-4 rounded shadow transition";
         
         btn.addEventListener('click', () => {
+            if(aDejaVote) return; // si deja voté, on bloque
+
             socket.emit('envoyer_vote', index);
+            aDejaVote = true; //voter correct
+
             const tousLesBoutons = choixContainerUI.querySelectorAll('button');
             tousLesBoutons.forEach(unBouton => {
                 unBouton.disabled = true;
                 if (unBouton === btn) {
                     unBouton.className = "bg-green-500 text-white font-bold py-4 px-4 rounded shadow border-4 border-white transform scale-105 transition"; 
-                    unBouton.textContent = " : CHOISI ✅"; 
                 } else {
                     unBouton.classList.add('opacity-25'); 
                     unBouton.classList.remove('hover:bg-blue-500'); 
@@ -181,6 +200,8 @@ socket.on('nouvelle_question', (laQuestion) => {
 
 socket.on('fin_manche', (infos) => {
     clearInterval(chronoInterval);
+    if(timerWrapper) timerWrapper.classList.add('hidden'); 
+
     if (infos.gagnant !== -1) {
        const boutons = choixContainerUI.querySelectorAll('button');
        if(boutons[infos.gagnant]) {
@@ -192,20 +213,52 @@ socket.on('fin_manche', (infos) => {
     scoreContainerUI.classList.remove('hidden');
     scoreboardUI.innerHTML = "";
     
-    infos.classement.forEach(joueur => {
+    htmlDuClassementFinal = '<div class="mt-4 bg-white/10 rounded-xl p-4 text-left w-full">';
+
+    infos.classement.forEach((joueur, index) => {
         const li = document.createElement('li');
-        li.textContent = `${joueur.nom} : ${joueur.points} pts`;
-        if (joueur.points > 0) li.classList.add('text-yellow-300', 'font-bold');
-        else li.classList.add('text-gray-300');
+        li.className = "text-xl font-bold text-center w-full list-none"; 
+        
+        let medaille = "";
+        if(index === 0) medaille = "🥇 ";
+        if(index === 1) medaille = "🥈 ";
+        if(index === 2) medaille = "🥉 ";
+
+        li.textContent = `${medaille}${joueur.nom} : ${joueur.points} pts`;
+
+        if (joueur.points > 0) li.classList.add('text-yellow-300');
+        else li.classList.add('text-gray-400');
+        
         scoreboardUI.appendChild(li);
+
+        htmlDuClassementFinal += `
+            <div class="flex justify-between items-center mb-2 border-b border-white/10 pb-1 last:border-0">
+                <span class="${index === 0 ? 'text-yellow-400 font-black text-lg' : 'text-gray-200'}">
+                    ${medaille} ${joueur.nom}
+                </span>
+                <span class="font-mono font-bold text-white">${joueur.points} pts</span>
+            </div>
+        `;
     });
+    
+    htmlDuClassementFinal += '</div>'; 
 
     questionTexteUI.textContent = "Résultats du tour ! Préparez-vous...";
     choixContainerUI.innerHTML = ""; 
 });
 
 socket.on('retour_lobby', () => {
-    afficherPopup("Partie terminée !<br>Retour au menu principal.");
+    afficherPopup(`
+        <h2 class="text-3xl font-black text-white mb-2">🏁 PARTIE TERMINÉE !</h2>
+        <p class="text-gray-400 text-sm mb-4">Voici le classement final :</p>
+        
+        ${htmlDuClassementFinal}
+
+        <button onclick="cacherPopup()" class="mt-4 bg-blue-600 px-4 py-2 rounded-lg font-bold text-sm hover:bg-blue-500 transition">
+            Retour au menu
+        </button>
+    `);
+
     ecranGame.classList.add('hidden');
     scoreContainerUI.classList.add('hidden'); 
     ecranLobby.classList.remove('hidden');

@@ -1,131 +1,200 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jeu de Soirée</title>
+    <title>Balance ton pote</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .fade-in {
+            animation: fadeIn 0.5s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 10px;
+        }
+
+        .pop-in {
+            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            from {
+                transform: scale(0);
+            }
+
+            to {
+                transform: scale(1);
+            }
+        }
+    </style>
 </head>
-<body class="bg-purple-900 text-white flex items-center justify-center h-screen">
 
-    <div id="app" class="text-center p-6 bg-purple-800 rounded-xl shadow-2xl w-full max-w-md">
-        
-        <h1 class="text-3xl font-bold mb-6">QUIZ MAJORITÉ</h1>
-        
-        <div id="login-screen">
-            <p class="mb-4 text-gray-300">Entre ton pseudo pour rejoindre :</p>
-            <input type="text" id="username" placeholder="Ton Pseudo..." 
-                   class="w-full p-3 mb-4 text-black rounded text-center font-bold outline-none border-4 border-transparent focus:border-yellow-400">
-            
-            <button id="btn-join" class="w-full bg-yellow-500 hover:bg-yellow-400 text-purple-900 font-bold py-3 px-6 rounded transition transform hover:scale-105">
-                REJOINDRE LA PARTIE
-            </button>
-        </div>
+<body
+    class="bg-[#1a1b26] text-white font-sans min-h-screen flex flex-col items-center justify-center p-4 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
 
-        <div id="lobby-screen" class="hidden">
-            <h2 class="text-xl text-yellow-400 font-bold mb-4">Joueurs connectés :</h2>
-            
-            <ul id="players-list" class="space-y-2 text-lg font-semibold mb-6">
-                </ul>
+    <div id="login-screen" class="w-full max-w-md fade-in">
+        <div class="bg-[#24283b] p-8 rounded-[2rem] shadow-2xl border border-white/5 text-center">
+            <div class="mb-6 text-6xl">👑</div>
+            <h1
+                class="text-4xl font-black mb-2 text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-pink-600">
+                BALANCE TON POTE
+            </h1>
+            <p class="text-gray-400 mb-8">La démocratie n'a jamais été aussi injuste.</p>
 
-            <div id="admin-controls" class="hidden border-t border-purple-600 pt-4">
-                <p class="text-sm text-yellow-300 mb-2">👑 Tu es le chef de la partie !</p>
-                
-                <div class="mb-4 text-left">
-                    <label class="text-yellow-400 font-bold">Thème de la soirée :</label>
-                    <select id="theme-select" class="w-full p-2 mt-2 text-black font-bold rounded">
-                        <option value="Honteux">😳 Situations Honteuses</option>
-                        <option value="Absurde">🤪 Absurde & Drôle</option>
-                        <option value="Trash">🔥 Trash & Piquant</option>
-                        <option value="Enfance">👶 Souvenirs d'enfance</option>
-                        <option value="Travail">💼 Vie de bureau</option>
-                        <option value="Aléatoire">🎲 Surprise (Aléatoire)</option>
-                    </select>
-                </div>
+            <div class="space-y-4">
+                <input type="text" id="username" placeholder="Ton pseudo..."
+                    class="w-full bg-[#1a1b26] border-2 border-[#414868] text-white text-lg rounded-2xl px-6 py-4 focus:outline-none focus:border-purple-500 transition-colors text-center placeholder-gray-600">
 
-                <div class="mb-4 text-left">
-                    <label class="text-yellow-400 font-bold">Nombre de questions :</label>
-                    <input type="number" id="nb-tours" value="5" min="1" max="20" 
-                        class="w-full p-2 mt-2 text-black font-bold rounded text-center">
-                </div>
-
-                <button id="btn-start" class="mt-4 w-full bg-green-500 hover:bg-green-400 text-white font-bold py-3 px-6 rounded shadow-lg animate-bounce">
-                    LANCER LA PARTIE !
+                <button id="btn-join"
+                    class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold py-4 rounded-2xl text-xl shadow-lg transform transition active:scale-95">
+                    REJOINDRE 🚀
                 </button>
             </div>
-
-            <div id="waiting-message" class="hidden mt-8">
-                <p class="text-gray-300 animate-pulse text-lg">
-                    ☕ En attente du chef de partie...<br>
-                    <span class="text-xs text-gray-500">(Il choisit le thème)</span>
-                </p>
-            </div>
-            <div class="mt-8 border-t-2 border-purple-600 pt-6">
-                <h3 class="text-gray-300 font-bold mb-2">En attendant... Teste tes réflexes ! ⚡</h3>
-                
-                <div class="flex justify-between items-center mb-2 px-4">
-                    <div class="text-left">
-                        <span class="text-yellow-400 font-bold block">Score : <span id="mini-score">0</span></span>
-                        <span class="text-gray-400 text-xs">Record : <span id="best-score">0</span></span>
-                    </div>
-
-                    <button id="btn-mini-start" class="bg-blue-600 text-xs py-1 px-3 rounded hover:bg-blue-500 transition">
-                        JOUER
-                    </button>
-                </div>
-
-                <div id="mini-game-box" class="relative w-full h-48 bg-purple-900/50 rounded-xl border-2 border-purple-500 hidden overflow-hidden cursor-crosshair">
-                    
-                    <button id="mini-target" class="absolute w-12 h-12 bg-yellow-400 rounded-full shadow-[0_0_15px_rgba(250,204,21,0.8)] active:scale-90 transition-transform duration-75">
-                    </button>
-
-                    <div id="mini-game-over" class="hidden absolute inset-0 bg-black/90 flex flex-col items-center justify-center text-white z-20 cursor-pointer backdrop-blur-sm">
-                        
-                        <div class="bg-purple-800 p-4 rounded-xl border-2 border-red-500 shadow-2xl transform scale-110 text-center">
-                            <h3 class="text-2xl font-bold text-red-500 mb-1 animate-bounce">☠️ PERDU !</h3>
-                            <p class="text-gray-300 text-sm mb-3">Trop lent...</p>
-                            
-                            <div class="bg-purple-900 rounded p-2 mb-2">
-                                <span class="text-gray-400 text-xs">Ton Score :</span><br>
-                                <span class="text-3xl font-bold text-yellow-400" id="final-score">0</span>
-                            </div>
-
-                            <p class="text-xs text-white bg-blue-600 py-1 px-3 rounded-full animate-pulse mt-2">
-                                Tape pour rejouer 
-                            </p>
-                        </div>
-
-                    </div>
-
-                </div>
-            </div>
         </div>
-
-        <div id="game-screen" class="hidden">
-            <div id="timer-container" class="w-full bg-gray-300 rounded-full h-4 mb-6 overflow-hidden">
-                <div id="timer-bar" class="bg-green-500 h-4 rounded-full transition-all duration-100 ease-linear" style="width: 100%;"></div>
-            </div>
-
-            <h2 id="question-text" class="text-2xl font-bold mb-8 text-white">
-                En attente de la question...
-            </h2>
-
-            <div id="choices-container" class="grid grid-cols-1 gap-4">
-                </div>
-
-            <div id="score-container" class="hidden mt-8 border-t-2 border-purple-600 pt-4 bg-purple-900/50 p-4 rounded">
-                <h3 class="text-yellow-400 font-bold mb-2 text-xl">🏆 Classement Actuel :</h3>
-                <ul id="scoreboard" class="text-lg space-y-1">
-                    </ul>
-            </div>
-        </div>
-
     </div>
 
-    <div id="custom-popup" class="hidden fixed inset-0 bg-black/90 z-50 flex items-center justify-center cursor-pointer">
-        <div class="bg-white text-purple-900 p-8 rounded-2xl shadow-2xl max-w-md text-center border-4 border-yellow-400 transform scale-110 transition">
-            <p id="popup-message" class="text-2xl font-bold mb-2">Message ici</p>
-            <p class="text-sm text-gray-500 animate-pulse">(Clique n'importe où pour fermer)</p>
+    <div id="lobby-screen" class="hidden w-full max-w-5xl fade-in">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+            <div
+                class="md:col-span-1 bg-[#24283b] rounded-[2.5rem] p-6 shadow-xl border border-white/5 flex flex-col h-[600px]">
+                <h2 class="text-2xl font-bold mb-4 flex items-center gap-2 text-purple-300">
+                    <span>👥</span> Joueurs
+                </h2>
+                <ul id="players-list" class="space-y-3 overflow-y-auto flex-1 pr-2">
+                </ul>
+            </div>
+
+            <div class="md:col-span-2 flex flex-col gap-6 h-[600px] overflow-y-auto pr-2">
+
+                <div
+                    class="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-[2.5rem] p-8 shadow-lg text-center flex-shrink-0">
+                    <h2 class="text-3xl font-black uppercase tracking-widest">Salle d'attente</h2>
+                    <p id="waiting-message" class="text-indigo-200 mt-2 animate-pulse">Le chef prépare la partie...</p>
+                </div>
+
+                <div
+                    class="bg-[#1f2335] rounded-[2.5rem] p-6 shadow-xl border-2 border-dashed border-[#414868] relative overflow-hidden flex-shrink-0">
+
+                    <div class="flex justify-between items-end mb-4 z-10 relative">
+                        <div>
+                            <h3 class="text-yellow-400 font-bold text-xl">⚡ Teste tes réflexes</h3>
+                            <p class="text-xs text-gray-400">Clique sur les cibles avant qu'elles ne disparaissent !</p>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-sm text-gray-400">Record : <span id="best-score"
+                                    class="text-white font-bold">0</span></div>
+                            <div class="text-2xl font-black text-yellow-400">Score : <span id="mini-score">0</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="mini-game-box"
+                        class="relative w-full h-48 bg-[#16161e] rounded-2xl border border-white/10 hidden overflow-hidden cursor-crosshair shadow-inner">
+
+                        <button id="mini-target"
+                            class="absolute w-12 h-12 bg-gradient-to-br from-yellow-300 to-orange-500 rounded-full shadow-[0_0_20px_rgba(250,204,21,0.6)] active:scale-90 transition-transform duration-75 border-2 border-white pop-in z-10"></button>
+
+                        <div id="mini-game-over"
+                            class="hidden absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-white z-20 backdrop-blur-sm">
+                            <h3 class="text-3xl font-black text-red-500 mb-2 transform -rotate-6">PERDU !</h3>
+                            <p class="text-gray-300 mb-4">Score final : <span id="final-score"
+                                    class="text-white font-bold text-xl">0</span></p>
+                            <span class="text-xs bg-white/10 px-3 py-1 rounded-full animate-pulse">Tape pour
+                                rejouer</span>
+                        </div>
+                    </div>
+
+                    <button id="btn-mini-start"
+                        class="w-full bg-[#3b4261] hover:bg-[#414868] text-blue-200 font-bold py-3 rounded-2xl border border-blue-500/30 transition shadow-lg mt-2">
+                        CLIQUE ICI POUR JOUER 🎮
+                    </button>
+                </div>
+
+                <div id="admin-controls"
+                    class="hidden bg-[#24283b] rounded-[2.5rem] p-6 shadow-xl border border-white/5 flex flex-col gap-4 flex-shrink-0">
+                    <h3 class="text-green-400 font-bold flex items-center gap-2">👑 Options du Chef</h3>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs text-gray-400 font-bold mb-1 ml-2">THÈME</label>
+                            <select id="theme-select" class="w-full bg-[#16161e] text-white p-3 rounded-xl border border-[#414868] focus:border-green-500 outline-none appearance-none font-bold">
+                                <option value="Aléatoire">🎲 Mix Général (Surprise)</option>
+                                <option value="Trash et Humour Noir">🔥 Trash & Piquant</option>
+                                <option value="Situations Honteuses">🙈 Dossiers & Hontes (On balance tout)</option>
+                                <option value="Amour, Sexe et Dates">💘 Amour, Dates & Caliente</option>
+                                <option value="Soirée et Alcool">🍻 Soirée, Fête & Débauche</option>
+                                <option value="Argent et Succès">💸 Argent, Prison & Carrière</option>
+                                <option value="Survie Zombie">🧟 Fin du Monde & Zombies</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-400 font-bold mb-1 ml-2">TOURS</label>
+                            <input type="number" id="nb-tours" value="5" min="3" max="20"
+                                class="w-full bg-[#16161e] text-white p-3 rounded-xl border border-[#414868] focus:border-green-500 outline-none">
+                        </div>
+                    </div>
+
+                    <button id="btn-start"
+                        class="w-full bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-400 hover:to-emerald-500 text-white font-black py-4 rounded-xl text-xl shadow-lg transition-transform hover:scale-[1.02] active:scale-95">
+                        LANCER LA PARTIE ! ▶
+                    </button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    <div id="game-screen" class="hidden w-full max-w-5xl fade-in pb-10">
+        <div id="timer-container"
+            class="w-full bg-[#16161e] rounded-full h-6 mb-8 overflow-hidden border border-white/10 shadow-inner">
+            <div id="timer-bar"
+                class="bg-gradient-to-r from-green-400 to-green-600 h-full rounded-full transition-all duration-100 ease-linear shadow-[0_0_15px_rgba(74,222,128,0.5)]"
+                style="width: 100%;"></div>
+        </div>
+
+        <div id="question-text" class="w-full mb-8 flex flex-col items-center justify-center text-center min-h-[100px]">
+        </div>
+
+        <div id="choices-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 w-full"></div>
+
+        <div id="score-container" class="hidden mt-8">
+            <div class="bg-[#24283b] rounded-[2.5rem] p-6 border border-white/5">
+                <h3 class="text-yellow-400 font-black text-2xl mb-4 text-center tracking-widest uppercase">🏆 Classement
+                </h3>
+                <ul id="scoreboard" class="w-full flex flex-col items-center gap-4"></ul>            </div>
+        </div>
+    </div>
+
+    <div id="custom-popup"
+        class="hidden fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50 cursor-pointer">
+        <div
+            class="bg-gradient-to-br from-indigo-900 to-[#1a1b26] p-8 rounded-[2rem] shadow-2xl border border-white/10 max-w-lg text-center transform scale-100 animate-bounce-in">
+            <div class="text-5xl mb-4">📣</div>
+            <div id="popup-message" class="text-xl md:text-2xl font-bold text-white leading-relaxed"></div>
+            <p class="text-gray-400 mt-6 text-sm">(Clique pour fermer)</p>
         </div>
     </div>
 
@@ -133,4 +202,5 @@
     <script src="client.js"></script>
     <script src="minijeu.js"></script>
 </body>
+
 </html>

@@ -17,17 +17,20 @@ let toursRestants = 0;
 let scores = {};
 let questionsDuJeu = [];
 let hostId = null;
+let reglesDejaAffichees = false;
 
 app.use(express.static(path.join(__dirname, "public")));
 
 async function genererQuestionsIA(nb, theme, nbJoueursReels, joueur) {
-    // On s'assure d'avoir un tableau de noms propre (ex: ['Théo', 'Manon', 'Julie'])
-    const listeNoms = Object.values(joueur); 
-    const nomsString = JSON.stringify(listeNoms);
+  // On s'assure d'avoir un tableau de noms propre (ex: ['Théo', 'Manon', 'Julie'])
+  const listeNoms = Object.values(joueur);
+  const nomsString = JSON.stringify(listeNoms);
 
-    console.log(`🤖 L'IA génère ${nb} questions pour ${nbJoueursReels} joueurs (${theme})...`);
+  console.log(
+    `🤖 L'IA génère ${nb} questions pour ${nbJoueursReels} joueurs (${theme})...`
+  );
 
-    const prompt = `
+  const prompt = `
     Tu es un animateur de jeu de soirée. Génère une liste de ${nb} questions pour un groupe d'amis.
     
     INFORMATIONS DE LA PARTIE :
@@ -164,45 +167,81 @@ io.on("connection", (socket) => {
     io.emit("mise_a_jour_host", hostId);
   });
 
-  socket.on('lancer_partie', async (data) => {
+  socket.on("lancer_partie", async (data) => {
     if (socket.id !== hostId) return;
+    let tempsLectureMinimum = 0;
+    if (!reglesDejaAffichees) {
+      const regles = `
+        <div class="flex flex-col gap-4 text-left text-base md:text-xl font-normal">
+            <h2 class="text-3xl font-extrabold text-center text-yellow-400 mb-2 tracking-wider">
+                📜 RÈGLES DU JEU
+            </h2>
+            
+            <div class="bg-purple-800/80 p-4 rounded-xl border-l-4 border-blue-400 shadow-lg flex items-center gap-4 transition-transform hover:scale-105">
+                <span class="text-4xl">🗳️</span>
+                <div>
+                    <span class="font-bold text-blue-300">VOTEZ</span> pour le joueur qui correspond le mieux à la question.
+                </div>
+            </div>
 
-    const regles = `📜 RÈGLES DU JEU :<br><br>
-    1. Votez pour le joueur qui correspond le mieux à la question.<br>
-    2. La majorité l'emporte.<br>
-    3. Ceux qui ont voté comme la majorité gagnent 1 point.<br>`;
-    
+            <div class="bg-purple-800/80 p-4 rounded-xl border-l-4 border-green-400 shadow-lg flex items-center gap-4 transition-transform hover:scale-105">
+                <span class="text-4xl">⚖️</span>
+                <div>
+                    La <span class="font-bold text-green-300">MAJORITÉ</span> l'emporte toujours.
+                </div>
+            </div>
+
+            <div class="bg-purple-800/80 p-4 rounded-xl border-l-4 border-yellow-400 shadow-lg flex items-center gap-4 transition-transform hover:scale-105">
+                <span class="text-4xl">💎</span>
+                <div>
+                    Ceux qui votent comme la majorité gagnent <span class="font-bold text-yellow-300">+1 POINT</span>.
+                </div>
+            </div>
+
+            <div class="bg-purple-800/80 p-4 rounded-xl border-l-4 border-red-500 shadow-lg flex items-center gap-4 transition-transform hover:scale-105">
+                <span class="text-4xl">🍺</span>
+                <div>
+                    Attention : Des <span class="font-bold text-red-400">GAGES</span> peuvent tomber !
+                </div>
+            </div>
+        </div>
+    `;
     io.emit("afficher_regles", regles);
+    tempsLectureMinimum = 15000;
+    reglesDejaAffichees = true;
+    }
 
     const debutChargement = Date.now();
-    const tempsLectureMinimum = 10000; 
-
     console.log("Génération en cours pendant la lecture des règles...");
     const nbTours = data.nbTours;
     const theme = data.theme;
     const joueurDeLaPartie = joueurs;
-    const nbJoueur = joueurs.length
-    questionsDuJeu = await genererQuestionsIA(nbTours, theme, nbJoueur, joueurDeLaPartie);
-    
+    const nbJoueur = Object.keys(joueurs).length;
+    questionsDuJeu = await genererQuestionsIA(
+      nbTours,
+      theme,
+      nbJoueur,
+      joueurDeLaPartie
+    );
+
     toursRestants = nbTours;
     scores = {};
-    Object.keys(joueurs).forEach(id => scores[id] = 0);
+    Object.keys(joueurs).forEach((id) => (scores[id] = 0));
 
     const tempsEcoule = Date.now() - debutChargement;
-    
+
     if (tempsEcoule < tempsLectureMinimum) {
         const tempsAttenteRestant = tempsLectureMinimum - tempsEcoule;
         console.log(`IA prête ! Attente de ${tempsAttenteRestant}ms pour la lecture.`);
-        
         setTimeout(() => {
             envoyerUneQuestion();
         }, tempsAttenteRestant);
-
     } else {
-        console.log("IA prête ! Lancement immédiat.");
+
+        console.log("IA prête ! Lancement immédiat 🚀");
         envoyerUneQuestion();
     }
-});
+  });
 
   socket.on("envoyer_vote", (indexChoix) => {
     votes[socket.id] = indexChoix;
@@ -231,7 +270,7 @@ io.on("connection", (socket) => {
         } else {
           io.emit("retour_lobby");
         }
-      }, 5000);
+      }, 3000);
     }
   });
 });

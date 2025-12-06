@@ -22,34 +22,37 @@ let reglesDejaAffichees = false;
 app.use(express.static(path.join(__dirname, "public")));
 
 async function genererQuestionsIA(nb, theme, nbJoueursReels, joueur) {
-  // On s'assure d'avoir un tableau de noms propre (ex: ['Théo', 'Manon', 'Julie'])
   const listeNoms = Object.values(joueur);
   const nomsString = JSON.stringify(listeNoms);
 
   console.log(
-    `🤖 L'IA génère ${nb} questions pour ${nbJoueursReels} joueurs (${theme})...`
+    `🤖 L'IA génère ${nb} questions pour ${nbJoueursReels} joueurs. Thème: "${theme}"`
   );
 
   const prompt = `
-    Tu es un animateur de jeu de soirée. Génère une liste de ${nb} questions pour un groupe d'amis.
-    
+    Tu es le Maître du jeu "Balance ton Pote".
+    Ta mission : créer des questions pour que les joueurs votent entre eux.
+
     INFORMATIONS DE LA PARTIE :
-    - Thème : "${theme}"
-    - Nombre de joueurs : ${nbJoueursReels}
-    - Liste des prénoms des joueurs : ${nomsString}
+    - Thème global : "${theme}"
+    - Joueurs présents : ${nomsString}
 
-    RÈGLES STRICTES :
-    1. **Phrasé** : Utilise des tournures comme "Qui parmi nous...", "Qui est le plus...", "Lequel de nous...".
-    2. **Longueur** : Maximum 15 mots par question (court et percutant).
-    3. **Interdit** : N'utilise jamais "Qui de nous deux".
-    4. **Placeholder** : Une fois sur trois, intègre la balise "{JOUEUR}" dans le texte de la question pour cibler quelqu'un (ex: "Qui volerait la voiture de {JOUEUR} ?").
-    5. **Les Choix (IMPORTANT)** : 
-       - Le champ "choix" doit être un tableau de chaînes de caractères.
-       - Tu dois piocher les noms UNIQUEMENT dans la liste fournie : ${nomsString}.
-       - Si le groupe a plus de 4 joueurs, sélectionne 4 noms au hasard pour les choix.
-       - Si le groupe a 4 joueurs ou moins, mets tous les noms dans les choix.
+    RÈGLES STRICTES DE RÉDACTION :
+    1. **Format** : JSON pur uniquement.
+    2. **Phrasé** : Questions courtes, funs et langage parlé.
+    3. **Ciblage** : Environ 1 fois sur 3, insère "{JOUEUR}" pour cibler quelqu'un (ex: "Qui volerait la voiture de {JOUEUR} ?").
+    
+    4. **TYPE DE QUESTION (CRUCIAL)** : 
+       - La réponse à la question doit OBLIGATOIREMENT être une personne (un prénom).
+       - ⛔ INTERDIT de poser des questions ouvertes comme "Quel serait le titre...", "Quelle date...", "Pourquoi...".
+       - ✅ Tes questions doivent commencer par : "Qui...", "Lequel...", "C'est qui le genre à...", "Quel joueur...".
 
-    FORMAT DE SORTIE (JSON uniquement, sans markdown) :
+    RÈGLES POUR LES CHOIX :
+    - Le champ "choix" doit être un tableau avec les noms des joueurs.
+    - Si 8 joueurs ou moins : METS TOUS LES NOMS.
+    - Si plus de 8 joueurs : Sélectionne 8 noms au hasard.
+
+    EXEMPLE DE STRUCTURE (JSON) :
     [
       {
         "texte": "Qui finirait en prison le premier ?",
@@ -57,9 +60,11 @@ async function genererQuestionsIA(nb, theme, nbJoueursReels, joueur) {
       },
       {
         "texte": "Qui est secrètement amoureux de {JOUEUR} ?",
-        "choix": ["Manon", "Paul", "Théo", "Léa"]
+        "choix": ["Théo", "Manon", "Paul", "Léa"]
       }
     ]
+
+    Génère liste de ${nb} questions.
     `;
 
   try {
@@ -72,14 +77,13 @@ async function genererQuestionsIA(nb, theme, nbJoueursReels, joueur) {
       .replace(/```/g, "")
       .trim();
 
-    const questionsGenerees = JSON.parse(text);
-    return questionsGenerees;
+    return JSON.parse(text);
   } catch (error) {
     console.error("⚠️ Erreur IA :", error.message);
     return [
       {
-        texte: "L'IA a buggé, mais on continue ! Qui paye sa tournée ?",
-        choix: ["C'est moi", "Jamais", "Si je perds", "Le chef"],
+        texte: "L'IA a buggé... Qui a la pire connexion ici ?",
+        choix: listeNoms, 
       },
     ];
   }
@@ -250,14 +254,23 @@ io.on("connection", (socket) => {
 
     if (nbVotesActuels === nbJoueursTotal) {
       const indexGagnant = calculerResultats();
-      Object.keys(votes).forEach((idJoueur) => {
-        if (votes[idJoueur] === indexGagnant) scores[idJoueur] += 1;
+      
+      let classement = [];
+      
+      Object.keys(joueurs).forEach((id) => {
+        const aVotePourLeGagnant = (votes[id] === indexGagnant);
+        
+        if (aVotePourLeGagnant) {
+            scores[id] += 1;
+        }
+
+        classement.push({ 
+            nom: joueurs[id], 
+            points: scores[id] || 0,
+            gain: aVotePourLeGagnant ? 1 : 0 
+        });
       });
 
-      let classement = [];
-      Object.keys(joueurs).forEach((id) => {
-        classement.push({ nom: joueurs[id], points: scores[id] || 0 });
-      });
       classement.sort((a, b) => b.points - a.points);
 
       io.emit("fin_manche", { gagnant: indexGagnant, classement: classement });
@@ -270,7 +283,7 @@ io.on("connection", (socket) => {
         } else {
           io.emit("retour_lobby");
         }
-      }, 3000);
+      }, 3000); 
     }
   });
 });

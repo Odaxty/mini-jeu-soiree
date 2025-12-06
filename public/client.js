@@ -21,6 +21,9 @@ const scoreboardUI = document.getElementById('scoreboard');
 const scoreContainerUI = document.getElementById('score-container');
 const timerWrapper = document.getElementById('timer-container');
 
+const selectTheme = document.getElementById('theme-select'); 
+const customThemeInput = document.getElementById('custom-theme-input');
+
 // POPUP
 const popupUI = document.getElementById('custom-popup');
 const popupMessageUI = document.getElementById('popup-message');
@@ -28,6 +31,18 @@ let popupTimer;
 let aDejaVote = false; // Pour savoir si on a cliqué ou pas
 let chronoInterval; // Variable pour stocker le timer
 let htmlDuClassementFinal = "";
+
+if (selectTheme && customThemeInput) {
+    selectTheme.addEventListener('change', () => {
+        if (selectTheme.value === 'custom') {
+            customThemeInput.classList.remove('hidden'); 
+            customThemeInput.focus();
+        } else {
+            customThemeInput.classList.add('hidden'); 
+        }
+    });
+}
+
 // On ajoute un deuxième paramètre qui est "true" par défaut
 function lancerChrono(dureeEnSecondes, estUneQuestion = true) {
     const barre = document.getElementById('timer-bar');
@@ -130,16 +145,20 @@ socket.on('mise_a_jour_host', (idDuChef) => {
 if(btnStart) {
     btnStart.addEventListener('click', () => {
         const inputTours = document.getElementById('nb-tours');
-        const selectTheme = document.getElementById('theme-select'); 
-        
         const nbTours = inputTours ? parseInt(inputTours.value) : 5;
-        const theme = selectTheme ? selectTheme.value : "Aléatoire"; 
+        
+        let themeChoisi = selectTheme.value;
+
+        if (themeChoisi === 'custom') {
+            const textePerso = customThemeInput.value.trim();
+            themeChoisi = textePerso.length > 0 ? textePerso : "Aléatoire";
+        }
 
         btnStart.textContent = "Génération par l'IA... 🤖";
         btnStart.disabled = true;
         btnStart.classList.add('opacity-50');
 
-        socket.emit('lancer_partie', { nbTours, theme });
+        socket.emit('lancer_partie', { nbTours, theme: themeChoisi });
     });
 }
 
@@ -217,14 +236,25 @@ socket.on('fin_manche', (infos) => {
 
     infos.classement.forEach((joueur, index) => {
         const li = document.createElement('li');
-        li.className = "text-xl font-bold text-center w-full list-none"; 
-        
+        li.className = "text-xl font-bold text-center w-full list-none flex justify-center items-center gap-2"; // J'ai ajouté flex pour aligner
+
         let medaille = "";
         if(index === 0) medaille = "🥇 ";
         if(index === 1) medaille = "🥈 ";
         if(index === 2) medaille = "🥉 ";
 
+        // Construction du texte de base
         li.textContent = `${medaille}${joueur.nom} : ${joueur.points} pts`;
+
+        // --- AJOUT DU +1 ---
+        if (joueur.gain > 0) {
+            const spanPlusUn = document.createElement('span');
+            spanPlusUn.textContent = "+1";
+            // Animation et couleur verte
+            spanPlusUn.className = "text-green-400 font-black text-2xl animate-bounce";
+            li.appendChild(spanPlusUn);
+        }
+        // -------------------
 
         if (joueur.points > 0) li.classList.add('text-yellow-300');
         else li.classList.add('text-gray-400');

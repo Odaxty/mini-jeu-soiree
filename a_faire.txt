@@ -1,0 +1,34 @@
+ajouter mode de jeux :
+- duel 
+- Tribunal 
+
+1. Mode "DUEL" ⚔️
+Cible : Le serveur choisit 2 joueurs au hasard.
+
+Question : L'IA génère une question binaire (ex: "Entre Théo et Malo, qui est le plus radin ?").
+
+Interface Joueurs : Tout le monde a 2 boutons (Théo / Malo).
+
+But : Voter pour l'un des deux.
+
+2. Mode "TRIBUNAL" ⚖️
+Cible : Le serveur désigne 1 joueur comme "Victime" (ou "Nommé").
+
+Question : L'IA génère une question centrée sur cette victime (ex: "Quelle est la pire honte de Théo ?").
+
+Interface Joueurs :
+
+La Victime attend (elle verra les réponses plus tard pour juger, ou juste pour subir).
+
+Les Autres ont une zone de texte pour écrire une anecdote, une action ou une référence.
+
+But : Écrire la meilleure réponse sur la victime.
+
+3. Mode "VOTE" (Classique) 🗳️
+Cible : Tout le groupe.
+
+Question : L'IA génère une question généraliste (ex: "Qui de nous tous a le plus de chance de finir en prison ?").
+
+Interface Joueurs : Tout le monde a autant de boutons que de joueurs (ex: 3 joueurs = 3 boutons).
+
+But : Désigner une personne parmi tout le groupe (majorité).

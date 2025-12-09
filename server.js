@@ -8,7 +8,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY_TASK);
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY_JEUX);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 let joueurs = {};

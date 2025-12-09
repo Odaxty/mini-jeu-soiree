@@ -8,7 +8,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY);
+const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY_TASK);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
 let joueurs = {};
@@ -30,43 +30,54 @@ async function genererQuestionsIA(nb, theme, nbJoueursReels, joueur) {
   );
 
   const prompt = `
-    Tu es le Maître du jeu "Balance ton Pote".
-    Ta mission : créer des questions pour que les joueurs votent entre eux.
+    Tu es un animateur de jeu de soirée "Balance ton pote". Ton but est de créer des débats drôles et piquants.
+    Génère une liste de ${nb} questions en JSON.
 
-    INFORMATIONS DE LA PARTIE :
-    - Thème global : "${theme}"
-    - Joueurs présents : ${nomsString}
+    INFORMATIONS :
+    - Thème : "${theme}"
+    - Joueurs disponibles : ${nomsString}
 
-    RÈGLES STRICTES DE RÉDACTION :
-    1. **Format** : JSON pur uniquement.
-    2. **Phrasé** : Questions courtes, funs et langage parlé.
-    3. **Ciblage** : Environ 1 fois sur 3, insère "{JOUEUR}" pour cibler quelqu'un (ex: "Qui volerait la voiture de {JOUEUR} ?").
+    --- 
+    MODE 1 : LE DUEL (Environ 30% des questions)
+    Concept : Tu opposes DEUX joueurs spécifiques.
+    Règles :
+    1. Dans le champ "choix", mets UNIQUEMENT 2 prénoms tirés de la liste.
+    2. La question DOIT commencer par "Entre [Nom A] et [Nom B]..." ou "Si [Nom A] et [Nom B] se battaient...".
+    3. Exemple : "Entre Julie et Thomas, qui pleure devant un Disney ?" (Et tu mets Julie et Thomas dans les choix).
+
+    ---
+    MODE 2 : LE GROUPE (Les questions restantes)
+    Concept : Tout le monde peut être voté.
+    Règles :
+    1. La question commence par "Qui...", "Lequel de nous...", "Qui est le plus...".
+    2. NE JAMAIS citer un prénom dans la question (sauf si tu utilises la balise {JOUEUR}).
+    3. Remplis les choix avec 4 noms au hasard (ou tous les noms si < 4 joueurs).
     
-    4. **TYPE DE QUESTION (CRUCIAL)** : 
-       - La réponse à la question doit OBLIGATOIREMENT être une personne (un prénom).
-       - ⛔ INTERDIT de poser des questions ouvertes comme "Quel serait le titre...", "Quelle date...", "Pourquoi...".
-       - ✅ Tes questions doivent commencer par : "Qui...", "Lequel...", "C'est qui le genre à...", "Quel joueur...".
+    ---
+    STYLE D'ÉCRITURE (TRES IMPORTANT) :
+    - Sois direct et court (Max 15 mots).
+    - Pas de phrases compliquées. On veut du tac-au-tac.
+    - INTERDIT : Ne réponds pas à la question dans la question (ex: "Pourquoi Théo est bête ?" -> NON).
+    - INTERDIT : Ne fais pas de questions à rallonge avec des "Si... alors...".
+    - AUTORISÉ : Tu peux utiliser "{JOUEUR}" pour insérer un prénom aléatoire dans une question de groupe (ex: "Qui volerait l'argent de {JOUEUR} ?").
 
-    RÈGLES POUR LES CHOIX :
-    - Le champ "choix" doit être un tableau avec les noms des joueurs.
-    - Si 8 joueurs ou moins : METS TOUS LES NOMS.
-    - Si plus de 8 joueurs : Sélectionne 8 noms au hasard.
-
-    EXEMPLE DE STRUCTURE (JSON) :
+    FORMAT DE SORTIE ATTENDU (JSON pur) :
+>>>>>>> Stashed changes
     [
       {
-        "texte": "Qui finirait en prison le premier ?",
-        "choix": ["Théo", "Manon", "Paul", "Léa"]
+        "texte": "Entre Manon et Léo, qui survit le plus longtemps aux zombies ?",
+        "choix": ["Manon", "Léo"]
       },
       {
-        "texte": "Qui est secrètement amoureux de {JOUEUR} ?",
-        "choix": ["Théo", "Manon", "Paul", "Léa"]
+        "texte": "Qui a l'historique Internet le plus honteux ?",
+        "choix": ["Manon", "Léo", "Paul", "Julie"]
+      },
+      {
+        "texte": "Qui serait capable de vendre {JOUEUR} pour un kebab ?",
+        "choix": ["Manon", "Léo", "Paul", "Julie"]
       }
     ]
-
-    Génère liste de ${nb} questions.
-    `;
-
+  `;
   try {
     const result = await model.generateContent(prompt);
     const response = await result.response;
